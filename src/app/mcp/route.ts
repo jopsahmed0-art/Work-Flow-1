@@ -142,10 +142,11 @@ function buildServer(): McpServer {
         "Merging is usually quick: short wait with live progress, then a merge task_id — track it with get_task. " +
         "Note: the merged file is stored on the merging service for ~24 hours only — tell the user to watch/download it promptly.",
       inputSchema: {
-        urls: z.array(z.string()).min(2).max(10).optional()
-          .describe("Public direct video URLs (http/https) in merge order — the first clip starts the final video."),
-        task_ids: z.array(z.string()).min(2).max(10).optional()
-          .describe("Alternative to urls: task_ids of COMPLETED video generation tasks — their result URLs are merged in this order."),
+        // التحقق العددي (2..10) داخل runMerge برسائل عربية — المخطط هنا يسمح بالمرور ليظهر النص المطلوب
+        urls: z.array(z.string()).optional()
+          .describe("Public direct video URLs (http/https) in merge order — the first clip starts the final video. 2 to 10 clips."),
+        task_ids: z.array(z.string()).optional()
+          .describe("Alternative to urls: task_ids of COMPLETED video generation tasks — their result URLs are merged in this order. 2 to 10."),
         wait_seconds: z.number().int().min(0).max(240).default(60),
       },
     },
