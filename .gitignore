@@ -66,3 +66,6 @@ server.log
 /tests/
 /Caddyfile
 /.next-prod/
+
+# حِزم التصدير المحلية — لا تُرفع
+/download/
