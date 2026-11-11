@@ -44,7 +44,8 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-useless-escape": "off",
   },
 }, {
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]
+  // merger-service مشروع Node.js خالص (CommonJS) منشور مستقل على Vercel — خارج نطاق ESLint لتطبيق Next.js
+  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills", "merger-service/**"]
 }];
 
 export default eslintConfig;
