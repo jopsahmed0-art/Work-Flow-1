@@ -79,6 +79,15 @@ COMETAPI_VIDEO_MODEL=
 
 ## النشر على Vercel (مشروعان)
 
+**الطريقة الأسرع — زر النشر بضغطة واحدة** (سيطلب Vercel المتغيرات أثناء الاستيراد):
+
+| | الزر | Root Directory | المتغيرات المطلوبة |
+|---|---|---|---|
+| ① خدمة الدمج | [![Deploy](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjopsahmed0-art%2FWork-Flow-1&project-name=work-flow-merger&env=TURSO_DATABASE_URL,TURSO_AUTH_TOKEN) | اضبطها في خطوة Configure = `merger-service` | `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` |
+| ② المشروع الرئيسي | [![Deploy](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjopsahmed0-art%2FWork-Flow-1&project-name=work-flow-main&env=TURSO_DATABASE_URL,TURSO_AUTH_TOKEN,MERGER_API_BASE) | اتركه فارغًا | المتغيران السابقان + `MERGER_API_BASE` |
+
+> بعد نشر ① انسخ رابطها (مثل `https://work-flow-merger.vercel.app`) وضعه كقيمة `MERGER_API_BASE` عند نشر ②.
+
 > لا حاجة لأي تعديل في أوامر البناء — Vercel يكتشف Next.js تلقائيًا للمشروع الرئيسي،
 > وخدمة الدمج تعمل بجاهزيتها عبر `vercel.json` المرفق (Node.js خالص بلا خطوة بناء).
 
