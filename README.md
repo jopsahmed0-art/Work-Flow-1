@@ -79,9 +79,19 @@ COMETAPI_VIDEO_MODEL=
 
 ## النشر على Vercel (مشروعان)
 
-1. **خدمة الدمج أولًا**: Vercel → Add New Project → استورد المستودع → **Root Directory = `merger-service`** → أضف `TURSO_DATABASE_URL` و `TURSO_AUTH_TOKEN` (Environment Variables) → Deploy. انسخ رابط النشر.
-2. **المشروع الرئيسي**: Add New Project مرة أخرى → نفس المستودع → **Root Directory = جذر المستودع** → أضف المتغيرين السابقين + `MERGER_API_BASE=<رابط خدمة الدمج من الخطوة 1>` → Deploy.
+> لا حاجة لأي تعديل في أوامر البناء — Vercel يكتشف Next.js تلقائيًا للمشروع الرئيسي،
+> وخدمة الدمج تعمل بجاهزيتها عبر `vercel.json` المرفق (Node.js خالص بلا خطوة بناء).
+
+1. **خدمة الدمج أولًا**: Vercel → Add New Project → استورد المستودع → **Root Directory = `merger-service`** → أضف `TURSO_DATABASE_URL` و `TURSO_AUTH_TOKEN` (Environment Variables) → Deploy. انسخ رابط النشر (مثل `https://<merger-project>.vercel.app`).
+2. **المشروع الرئيسي**: Add New Project مرة أخرى → نفس المستودع → **Root Directory = جذر المستودع** (اتركه فارغًا) → أضف المتغيرين السابقين + `MERGER_API_BASE=<رابط خدمة الدمج من الخطوة 1>` → Deploy.
 3. افتح اللوحة، أضف مفاتيح kie.ai / CometAPI من بطاقة «مدير المفاتيح»، ثم اربط أي عميل MCP برابط `<origin>/mcp`.
+
+**ملاحظات النشر:**
+
+- ضع المفتاح في بطاقة «مدير المفاتيح» باللوحة (يُخزَّن في Turso ولا يوضع أبدًا في متغيرات البيئة) — المفتاح يجب أن يملك رصيدًا كافيًا لدى المزود.
+- كل `git push` للمستودع يعيد النشر تلقائيًا للمشروعين (Auto Deploy).
+- حدود المدة مضبوطة مسبقًا: `/mcp` حتى 300 ثانية (متوافق مع خطة Hobby بـ Fluid Compute) وخدمة الدمج كذلك، مع Cron يومي (3 فجرًا) لتنظيف ملفات الدمج المنتهية بعد 24 ساعة.
+- تحقق بعد النشر: افتح `<origin>/api/health` — يجب أن ترى `turso-connected` و`merger healthy=true`.
 
 ## اختبار سريع بـ curl
 
