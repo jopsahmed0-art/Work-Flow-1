@@ -63,20 +63,24 @@ export const nvidiaAdapter: ProviderAdapter = {
   /** صور متزامنة — base64 يُخزَّن ويُخدَم برابط عام من /api/media */
   async createImageSync(key, model, input) {
     const fmt = String(input.output_format ?? "png");
-    const body: Record<string, unknown> = { prompt: String(input.prompt ?? ""), mode: "base", output_format: fmt };
-    const ar = String(input.aspect_ratio ?? "");
-    if (ASPECTS.has(ar)) body.aspect_ratio = ar;
+    const buildBody = (withMode: boolean): Record<string, unknown> => {
+      const b: Record<string, unknown> = { prompt: String(input.prompt ?? ""), output_format: fmt };
+      // mode:"base" مطلوب لدى flux.1-dev — بعض النقاط الأخرى (schnell/SDXL) قد ترفضه، لذا التكيف تلقائيًا
+      if (withMode) b.mode = "base";
+      const ar = String(input.aspect_ratio ?? "");
+      if (ASPECTS.has(ar)) b.aspect_ratio = ar;
+      return b;
+    };
+    const call = (b: Record<string, unknown>) =>
+      providerFetch(`${NVIDIA_BASE}/v1/genai/${model.split("/").map(encodeURIComponent).join("/")}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify(b),
+        timeoutMs: 120000,
+      });
 
-    // ملاحظة: اسم الموديل يحتوي شرطة مائلة (black-forest-labs/flux.1-dev) — نشفّر كل مقطع منفردًا
-    // (encodeURIComponent على الاسم الكامل يشفر "/" نفسها فيلغي المسار → 404)
-    const modelPath = model.split("/").map(encodeURIComponent).join("/");
-    const res = await providerFetch(`${NVIDIA_BASE}/v1/genai/${modelPath}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify(body),
-      // flux.1-dev قد ينتظر في الطابور فترة — 180 ثانية تغطي التوليد المعتاد دون تعليق مفرط
-      timeoutMs: 180000,
-    });
+    let res = await call(buildBody(true));
+    if (res.status === 422) res = await call(buildBody(false)); // المخطط يختلف بين نقاط NIM — جرّب بلا mode
     const data = await readJson(res);
     const b64 = findBase64Deep(data);
     if (!b64) throw new ProviderErrorImpl(res.status, "NVIDIA: لم يُعَد صورة في الاستجابة");

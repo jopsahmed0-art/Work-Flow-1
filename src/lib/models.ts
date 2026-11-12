@@ -19,7 +19,7 @@ const KIE_IMAGE = process.env.KIE_IMAGE_MODEL || "gpt-image-2-6/flare-text-to-im
 const KIE_VIDEO = process.env.KIE_VIDEO_MODEL || "grok-imagine-video-1-5-preview";
 const COMET_IMAGE = process.env.COMETAPI_IMAGE_MODEL || "gpt-image-2.6-flare-text-to-image";
 const COMET_VIDEO = process.env.COMETAPI_VIDEO_MODEL || "grok-imagine-video-1-5-preview";
-const NVIDIA_IMAGE = process.env.NVIDIA_IMAGE_MODEL || "black-forest-labs/flux.1-dev";
+const NVIDIA_IMAGE = process.env.NVIDIA_IMAGE_MODEL || "black-forest-labs/flux.1-schnell";
 const GEMINI_IMAGE = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
 
 export const MODELS: ModelDef[] = [
