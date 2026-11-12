@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -134,19 +135,26 @@ export default function Dashboard() {
 
   /* ============ عمليات المفاتيح ============ */
   const addKey = async () => {
-    if (!apiKey.trim()) { toast({ title: "أدخل مفتاح API أولًا", variant: "destructive" }); return; }
+    const list = apiKey.split(/[\n\r;,]+/).map((s) => s.trim()).filter(Boolean);
+    if (!list.length) { toast({ title: "الصق مفتاحًا أو أكثر أولًا (سطر لكل مفتاح)", variant: "destructive" }); return; }
     setAdding(true);
     try {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, api_key: apiKey.trim(), label: label.trim() }),
+        body: JSON.stringify({ provider, api_keys: list, label: label.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) { toast({ title: data.error ?? "تعذر إضافة المفتاح", variant: "destructive" }); return; }
+      if (!res.ok) { toast({ title: data.error ?? "تعذر إضافة المفاتيح", variant: "destructive" }); return; }
       setKeys(data.keys ?? []);
       setApiKey(""); setLabel("");
-      toast({ title: "تمت إضافة المفتاح بنجاح — سيُجرَّب أولًا في الترتيب التسلسلي" });
+      const skippedNote = data.skipped > 0 ? ` — وتُجاهِل ${data.skipped} مكرر` : "";
+      toast({
+        title: data.added > 0
+          ? `تمت إضافة ${data.added} مفتاح${data.added > 1 ? "ًا" : ""} بنجاح${skippedNote}`
+          : "لم يُضف مفتاح جديد — كلها مكررة",
+        variant: data.added > 0 ? "default" : "destructive",
+      });
     } finally { setAdding(false); }
   };
 
@@ -174,6 +182,13 @@ export default function Dashboard() {
   const jsonChatgpt = useMemo(() => JSON.stringify({ mcpServers: { "media-generator": { url: mcpUrl, ...authHeader } } }, null, 2), [mcpUrl, authHeader]);
   const jsonClaude = useMemo(() => JSON.stringify({ mcpServers: { "media-generator": { type: "http", url: mcpUrl, ...authHeader } } }, null, 2), [mcpUrl, authHeader]);
   const jsonCursor = useMemo(() => JSON.stringify({ mcpServers: { "media-generator": { url: mcpUrl, ...authHeader } } }, null, 2), [mcpUrl, authHeader]);
+
+  /** ملخص صحة مسبحة المفاتيح — يظهر أعلى بطاقة المفاتيح */
+  const poolStats = useMemo(() => ({
+    active: keys.filter((k) => k.status === "active").length,
+    exhausted: keys.filter((k) => k.status === "exhausted").length,
+    disabled: keys.filter((k) => k.status === "disabled").length,
+  }), [keys]);
 
   const dbOk = health?.database === "turso-connected";
 
@@ -231,11 +246,24 @@ export default function Dashboard() {
                 <KeyRound className="size-5 text-cyan-400" /> مدير المفاتيح
               </CardTitle>
               <CardDescription className="leading-6 text-slate-400">
-                أضف عدة مفاتيح لكل مزود — التجربة تسلسلية (أول مفتاح ثم التالي ثم التالي) مع تبديل فوري تلقائي
-                عند أي خطأ أو نفاد رصيد دون توقف.
+                الصق عدة مفاتيح دفعة واحدة (سطر لكل مفتاح) — التجربة تسلسلية بالترتيب مع تبديل فوري
+                تلقائي للمفتاح التالي عند أي خطأ أو نفاد رصيد، فلا يتوقف التوليد.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* ملخص صحة المسبحة */}
+              <div className="flex flex-wrap gap-2">
+                <Badge className="gap-1.5 border border-emerald-500/40 bg-emerald-500/15 text-emerald-400">
+                  <CheckCircle2 className="size-3.5" /> نشط: {poolStats.active}
+                </Badge>
+                <Badge className="gap-1.5 border border-amber-500/40 bg-amber-500/15 text-amber-400">
+                  <AlertTriangle className="size-3.5" /> مستنزف: {poolStats.exhausted}
+                </Badge>
+                <Badge className="gap-1.5 border border-slate-500/40 bg-slate-400/15 text-slate-300">
+                  <PowerOff className="size-3.5" /> معطل: {poolStats.disabled}
+                </Badge>
+              </div>
+
               {/* نموذج الإضافة */}
               <div className="grid gap-2 sm:grid-cols-[150px_1fr_auto]">
                 <Select value={provider} onValueChange={setProvider}>
@@ -257,11 +285,12 @@ export default function Dashboard() {
                   {adding ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} إضافة
                 </Button>
               </div>
-              <Input
+              <Textarea
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="مفتاح API الكامل — يُخزَّن ويُعرض مقنّعًا فقط (ABCD123••••••••WXYZ)"
-                className="bg-slate-950 border-slate-700 font-mono text-sm"
+                placeholder={"مفتاح واحد أو أكثر — سطر لكل مفتاح:\nsk-example111111111111\nsk-example222222222222\n\nيُخزَّن ويُعرض مقنّعًا فقط (ABCD123••••••••WXYZ)"}
+                rows={3}
+                className="resize-y bg-slate-950 border-slate-700 font-mono text-sm"
                 dir="ltr"
               />
 

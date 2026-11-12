@@ -1,13 +1,32 @@
 /**
  * إدارة المفاتيح للواجهة:
  * GET  /api/keys — القائمة كاملة مع إخفاء المفاتيح دائمًا (maskKey) — لا يُعاد المفتاح الكامل في أي استجابة.
- * POST /api/keys — {provider, api_key, label?} مع رفض التكرار لنفس المزود.
+ * POST /api/keys — {provider, api_key | api_keys[], label?} — يدعم الإضافة بالجملة (سطر لكل مفتاح)
+ *                  مع رفض التكرار لنفس المزود وتقرير لكل مفتاح.
  */
 import { listKeys, insertKey, findDuplicateKey } from "@/lib/turso";
-import { safeKey } from "@/lib/keys";
+import { safeKey, maskKey } from "@/lib/keys";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const MAX_BATCH = 50;
+
+/** استخراج قائمة المفاتيح من الحقل المفرد أو المصفوفة — يقبل الأسطر الجديدة والفواصل */
+function parseKeyList(raw: unknown): string[] {
+  const parts: string[] = [];
+  const push = (v: unknown) => {
+    if (typeof v !== "string") return;
+    // فصل على الأسطر والفواصل والفواصل المنقوطة — المفتاح نفسه لا يحتوي هذه الرموز
+    for (const p of v.split(/[\n\r;,]+/)) {
+      const t = p.trim();
+      if (t) parts.push(t);
+    }
+  };
+  if (Array.isArray(raw)) raw.forEach(push);
+  else push(raw);
+  return parts.slice(0, MAX_BATCH);
+}
 
 export async function GET() {
   try {
@@ -20,28 +39,41 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { provider?: string; api_key?: string; label?: string };
+    const body = (await req.json()) as { provider?: string; api_key?: string; api_keys?: string[]; label?: string };
     const provider = String(body.provider ?? "").trim().toLowerCase();
-    const apiKey = String(body.api_key ?? "").trim();
     const label = String(body.label ?? "").trim().slice(0, 80);
 
     if (provider !== "kie" && provider !== "cometapi") {
       return Response.json({ error: "المزود يجب أن يكون kie أو cometapi" }, { status: 400 });
     }
-    if (!apiKey) {
-      return Response.json({ error: "مفتاح API مطلوب" }, { status: 400 });
+
+    const keyList = parseKeyList(body.api_keys ?? body.api_key);
+    if (keyList.length === 0) {
+      return Response.json({ error: "مفتاح API مطلوب — الصق مفتاحًا أو أكثر (سطر لكل مفتاح)" }, { status: 400 });
     }
 
-    // رفض التكرار لنفس المزود
-    const dup = await findDuplicateKey(provider, apiKey);
-    if (dup) {
-      return Response.json({ error: "هذا المفتاح مضاف مسبقًا لنفس المزود ولا يمكن تكراره" }, { status: 409 });
+    const results: { masked: string; ok: boolean; reason?: string }[] = [];
+    let added = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < keyList.length; i++) {
+      const apiKey = keyList[i];
+      // تسمية مرقمة تلقائيًا عند إضافة عدة مفاتيح بنفس التسمية
+      const effectiveLabel = keyList.length > 1 && label ? `${label} ${i + 1}` : label;
+      const dup = await findDuplicateKey(provider, apiKey);
+      if (dup) {
+        skipped++;
+        results.push({ masked: maskKey(apiKey), ok: false, reason: "مكرر — مضاف مسبقًا لنفس المزود" });
+        continue;
+      }
+      const id = crypto.randomUUID();
+      await insertKey({ id, provider, label: effectiveLabel, api_key: apiKey });
+      added++;
+      results.push({ masked: maskKey(apiKey), ok: true });
     }
 
-    const id = crypto.randomUUID();
-    await insertKey({ id, provider, label, api_key: apiKey });
     const keys = await listKeys();
-    return Response.json({ ok: true, id, keys: keys.map(safeKey) }, { status: 201 });
+    return Response.json({ ok: true, added, skipped, results, keys: keys.map(safeKey) }, { status: 201 });
   } catch (e) {
     return Response.json({ error: `تعذر إضافة المفتاح: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
   }
