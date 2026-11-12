@@ -39,6 +39,22 @@ function findBase64Deep(obj: unknown, depth = 0): string | null {
   return null;
 }
 
+/** بحث دفاعي عن رسالة سبب الفشل داخل استجابة التفاعل (steps/content/error بأشكال متعددة) */
+function digFailDetail(obj: unknown, depth = 0): string | null {
+  if (depth > 6 || obj == null) return null;
+  if (typeof obj === "string") return null;
+  if (Array.isArray(obj)) { for (const x of obj) { const r = digFailDetail(x, depth + 1); if (r) return r; } return null; }
+  if (typeof obj === "object") {
+    const rec = obj as Record<string, unknown>;
+    for (const k of ["message", "error", "failMsg", "error_message", "detail"]) {
+      const v = rec[k];
+      if (typeof v === "string" && v.length > 3) return v.slice(0, 300);
+    }
+    for (const v of Object.values(rec)) { const r = digFailDetail(v, depth + 1); if (r) return r; }
+  }
+  return null;
+}
+
 interface VideoOut { uri?: string; data?: string; mime?: string }
 
 /** استخراج الفيديو من استجابة Interactions — content[] بنوع video يحمل uri أو data */
@@ -138,6 +154,10 @@ export const geminiAdapter: ProviderAdapter = {
       const vid = extractInteractionVideo(data);
       if (vid) return { providerTaskId: `done:${encodeURIComponent(await completeVideo(key, vid))}` };
     }
+    // فشل فوري أثناء الإنشاء (مثل نفاد الحصة) — نُظهر السبب الحقيقي بدل مهمة محكوم عليها بالفشل
+    if (data.status === "failed") {
+      throw new ProviderErrorImpl(r.status, `gemini: ${digFailDetail(data) ?? "فشل تفاعل الفيديو فورًا"}`);
+    }
     return { providerTaskId: id };
   },
 
@@ -163,7 +183,7 @@ export const geminiAdapter: ProviderAdapter = {
     }
     if (["failed", "error", "cancelled"].includes(status)) {
       const errObj = data.error as { message?: string } | undefined;
-      return { status: "failed", error: errObj?.message ?? `gemini: حالة ${status}` };
+      return { status: "failed", error: errObj?.message ?? digFailDetail(data) ?? `gemini: حالة ${status}` };
     }
     return { status: "processing" };
   },
