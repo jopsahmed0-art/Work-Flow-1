@@ -24,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // RTL من أول لحظة + عربية
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
+    // RTL من أول لحظة + عربية + ثيم داكن مفعل مركزيًا لكل مكونات shadcn
+    <html lang="ar" dir="rtl" className="dark" suppressHydrationWarning>
       <body className={`${cairo.variable} font-[family-name:var(--font-cairo)] antialiased bg-background text-foreground`}>
         {children}
         <Toaster />

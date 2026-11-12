@@ -178,9 +178,15 @@ export default function Dashboard() {
   const dbOk = health?.database === "turso-connected";
 
   return (
-    // ثيم داكن بتدرجات سماوي/بنفسجي
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    // ثيم داكن مركزي (bg-background) + هالات ضوئية زخرفية خلف المحتوى
+    <div className="relative min-h-screen bg-background text-foreground">
+      {/* هالات ضوئية — لا تتفاعل مع الماوس */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -top-32 start-1/4 h-72 w-[36rem] rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute top-1/3 end-0 h-80 w-80 rounded-full bg-violet-600/10 blur-3xl" />
+        <div className="absolute bottom-0 start-0 h-64 w-64 rounded-full bg-cyan-400/5 blur-3xl" />
+      </div>
+      <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6">
 
         {/* ============ الهيدر ============ */}
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -189,7 +195,7 @@ export default function Dashboard() {
               <Zap className="size-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-extrabold sm:text-2xl">MCP Media Generator</h1>
+              <h1 className="bg-gradient-to-l from-cyan-300 via-white to-violet-300 bg-clip-text text-xl font-extrabold text-transparent sm:text-2xl">MCP Media Generator</h1>
               <p className="text-sm text-slate-400">خادم توليد الصور والفيديو ودمج المقاطع — لوحة الإدارة</p>
             </div>
           </div>
@@ -219,7 +225,7 @@ export default function Dashboard() {
         <div className="grid gap-6 lg:grid-cols-2">
 
           {/* ============ أ) مدير المفاتيح ============ */}
-          <Card className="border-slate-800 bg-slate-900/60 backdrop-blur">
+          <Card className="border-slate-800/80 bg-card/70 backdrop-blur">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <KeyRound className="size-5 text-cyan-400" /> مدير المفاتيح
@@ -303,7 +309,7 @@ export default function Dashboard() {
           </Card>
 
           {/* ============ ب) لوحة المهام ============ */}
-          <Card className="border-slate-800 bg-slate-900/60 backdrop-blur">
+          <Card className="border-slate-800/80 bg-card/70 backdrop-blur">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Activity className="size-5 text-violet-400" /> لوحة المهام
@@ -382,7 +388,7 @@ export default function Dashboard() {
           </Card>
 
           {/* ============ ج) ربط السيرفر ============ */}
-          <Card className="border-slate-800 bg-slate-900/60 backdrop-blur lg:col-span-2">
+          <Card className="border-slate-800/80 bg-card/70 backdrop-blur lg:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Plug className="size-5 text-cyan-400" /> ربط السيرفر
