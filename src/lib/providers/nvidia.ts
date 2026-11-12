@@ -59,7 +59,10 @@ export const nvidiaAdapter: ProviderAdapter = {
     const ar = String(input.aspect_ratio ?? "");
     if (ASPECTS.has(ar)) body.aspect_ratio = ar;
 
-    const res = await providerFetch(`${NVIDIA_BASE}/v1/genai/${encodeURIComponent(model)}`, {
+    // ملاحظة: اسم الموديل يحتوي شرطة مائلة (black-forest-labs/flux.1-dev) — نشفّر كل مقطع منفردًا
+    // (encodeURIComponent على الاسم الكامل يشفر "/" نفسها فيلغي المسار → 404)
+    const modelPath = model.split("/").map(encodeURIComponent).join("/");
+    const res = await providerFetch(`${NVIDIA_BASE}/v1/genai/${modelPath}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": `Bearer ${key}` },
       body: JSON.stringify(body),

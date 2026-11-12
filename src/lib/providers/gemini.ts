@@ -28,7 +28,8 @@ export const geminiAdapter: ProviderAdapter = {
     const ar = String(input.aspect_ratio ?? "");
     if (ar && ar !== "auto") text += ` (aspect ratio ${ar})`;
 
-    const res = await providerFetch(`${GEMINI_BASE}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    const modelPath = model.split("/").map(encodeURIComponent).join("/");
+    const res = await providerFetch(`${GEMINI_BASE}/v1beta/models/${modelPath}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
