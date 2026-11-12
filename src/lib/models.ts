@@ -21,6 +21,8 @@ const COMET_IMAGE = process.env.COMETAPI_IMAGE_MODEL || "gpt-image-2.6-flare-tex
 const COMET_VIDEO = process.env.COMETAPI_VIDEO_MODEL || "grok-imagine-video-1-5-preview";
 const NVIDIA_IMAGE = process.env.NVIDIA_IMAGE_MODEL || "black-forest-labs/flux.1-schnell";
 const GEMINI_IMAGE = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
+// Veo 3.1 Preview توقف في Gemini API منذ 2026-10-22 — البديل الرسمي: Interactions API مع Gemini Omni Flash
+const GEMINI_VIDEO = process.env.GEMINI_VIDEO_MODEL || "gemini-omni-1.2-flash";
 
 export const MODELS: ModelDef[] = [
   {
@@ -35,8 +37,9 @@ export const MODELS: ModelDef[] = [
     canonical: "grok-imagine-video-1-5-preview",
     aliases: ["grok-imagine-video-1.5-preview", "grok-imagine-video-1-5", "grok-imagine-video-1.5"],
     type: "video",
-    providers: ["kie", "cometapi"],
-    providerModel: { kie: KIE_VIDEO, cometapi: COMET_VIDEO, nvidia: "", gemini: "" },
+    // الفيديو: kie ثم cometapi ثم gemini (Gemini Omni عبر Interactions API) كشبكة أمان بمفتاح موجود
+    providers: ["kie", "cometapi", "gemini"],
+    providerModel: { kie: KIE_VIDEO, cometapi: COMET_VIDEO, nvidia: "", gemini: GEMINI_VIDEO },
   },
 ];
 

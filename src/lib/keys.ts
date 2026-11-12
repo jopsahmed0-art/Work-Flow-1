@@ -22,7 +22,8 @@ export async function getKeyPool(providers: string[]): Promise<KeyRow[]> {
 export type ErrorClass = "disabled" | "exhausted" | "provider" | "params" | "temporary";
 
 /** أنماط الرسائل المعروفة — تُفحص case-insensitive */
-const AUTH_PATTERNS = /invalid api key|unauthorized|forbidden|authentication|api key.*(invalid|not valid|incorrect)|invalid.*(token|key)/i;
+// "unusual account activity": الحساب نفسه معلّق من المزود (مقاسة من kie.ai) — لا طلب سيمرّ به فالتعطيل تلقائيًا أفضل من تكرار المحاولة للأبد
+const AUTH_PATTERNS = /invalid api key|unauthorized|forbidden|authentication|api key.*(invalid|not valid|incorrect)|invalid.*(token|key)|unusual account activity/i;
 const BALANCE_PATTERNS = /insufficient|quota|balance|credit|out of credits|exhausted|充值|billing|payment required|no enough/i;
 const MODEL_PATTERNS = /model not found|unsupported model|not supported.*model|model.*(not supported|does not exist|not found)|unknown model/i;
 
