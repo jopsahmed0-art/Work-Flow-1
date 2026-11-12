@@ -74,7 +74,8 @@ export const nvidiaAdapter: ProviderAdapter = {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": `Bearer ${key}` },
       body: JSON.stringify(body),
-      timeoutMs: 120000,
+      // flux.1-dev قد ينتظر في الطابور فترة — 180 ثانية تغطي التوليد المعتاد دون تعليق مفرط
+      timeoutMs: 180000,
     });
     const data = await readJson(res);
     const b64 = findBase64Deep(data);
