@@ -21,7 +21,15 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
   if (typeof body.message === "string" && body.message.toLowerCase().includes("error")) {
     throw new ProviderErrorImpl(res.status, body.message);
   }
-  if (!res.ok && !body.artifacts && !body.image) throw new ProviderErrorImpl(res.status, `HTTP ${res.status}`);
+  if (!res.ok) {
+    // NIM يعيد أخطاء التحقق في "detail" (نص أو مصفوفة FastAPI) — نُظهرها للتشخيص
+    const detail = typeof body.detail === "string"
+      ? body.detail
+      : Array.isArray(body.detail)
+        ? JSON.stringify(body.detail).slice(0, 300)
+        : "";
+    throw new ProviderErrorImpl(res.status, detail ? `NVIDIA ${res.status}: ${detail}` : `HTTP ${res.status}`);
+  }
   return body;
 }
 
@@ -55,7 +63,7 @@ export const nvidiaAdapter: ProviderAdapter = {
   /** صور متزامنة — base64 يُخزَّن ويُخدَم برابط عام من /api/media */
   async createImageSync(key, model, input) {
     const fmt = String(input.output_format ?? "png");
-    const body: Record<string, unknown> = { prompt: String(input.prompt ?? ""), output_format: fmt };
+    const body: Record<string, unknown> = { prompt: String(input.prompt ?? ""), mode: "base", output_format: fmt };
     const ar = String(input.aspect_ratio ?? "");
     if (ASPECTS.has(ar)) body.aspect_ratio = ar;
 
