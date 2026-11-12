@@ -6,15 +6,18 @@
  */
 import { getTurso, ensureSchema, type KeyRow } from "./turso";
 
-/** جلب مسبحة المفاتيح لمزودات الموديل — المستنزف يبقى في القائمة، والتعطيل يدوي فقط */
+/** جلب مسبحة المفاتيح لمزودات الموديل — المستنزف يبقى في القائمة، والتعطيل يدوي فقط.
+ * الترتيب: مواقع المزودين في models.ts أولًا (كما هو موثّق)، ثم وقت إضافة المفتاح داخل كل مزود */
 export async function getKeyPool(providers: string[]): Promise<KeyRow[]> {
   await ensureSchema();
+  if (!providers.length) return [];
   const placeholders = providers.map(() => "?").join(", ");
+  const cases = providers.map((p, i) => `WHEN ? THEN ${i}`).join(" ");
   const r = await getTurso().execute({
     sql: `SELECT * FROM api_keys
           WHERE status != 'disabled' AND provider IN (${placeholders})
-          ORDER BY created_at ASC, id ASC`,
-    args: providers,
+          ORDER BY CASE provider ${cases} END, created_at ASC, id ASC`,
+    args: [...providers, ...providers],
   });
   return r.rows.map((x) => x as unknown as KeyRow);
 }

@@ -183,7 +183,9 @@ export const geminiAdapter: ProviderAdapter = {
     }
     if (["failed", "error", "cancelled"].includes(status)) {
       const errObj = data.error as { message?: string } | undefined;
-      return { status: "failed", error: errObj?.message ?? digFailDetail(data) ?? `gemini: حالة ${status}` };
+      const detail = errObj?.message ?? digFailDetail(data)
+        ?? `حالة ${status} — رد Google: ${JSON.stringify(data).slice(0, 260)}`;
+      return { status: "failed", error: `gemini: ${detail}` };
     }
     return { status: "processing" };
   },
