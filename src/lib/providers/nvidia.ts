@@ -76,7 +76,9 @@ export const nvidiaAdapter: ProviderAdapter = {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": `Bearer ${key}` },
         body: JSON.stringify(b),
-        timeoutMs: 120000,
+        // نقاط NIM المتزامنة تستجيب عادة في ثوانٍ — تجاوز ذلك معناه طابور حساب بلا صلاحية
+        // ومهلة قصيرة تحمي المسبحة من التعليق عند كل محاولة
+        timeoutMs: 45000,
       });
 
     let res = await call(buildBody(true));

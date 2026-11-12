@@ -27,8 +27,8 @@ export const MODELS: ModelDef[] = [
     canonical: "gpt-image-2-6/flare-text-to-image",
     aliases: ["gpt-image-2.6/flare-text-to-image", "gpt-image-2-6-flare-text-to-image", "gpt-image-2.6-flare-text-to-image"],
     type: "image",
-    // الصور: مزودات sync الجديدة أولًا (أسرع نجاحًا مع المفاتيح المجانية) ثم kie ثم cometapi
-    providers: ["nvidia", "gemini", "kie", "cometapi"],
+    // الصور: gemini أولًا (سريع الرد وحصته المجانية تتجدد)، ثم nvidia، ثم kie ثم cometapi
+    providers: ["gemini", "nvidia", "kie", "cometapi"],
     providerModel: { kie: KIE_IMAGE, cometapi: COMET_IMAGE, nvidia: NVIDIA_IMAGE, gemini: GEMINI_IMAGE },
   },
   {
