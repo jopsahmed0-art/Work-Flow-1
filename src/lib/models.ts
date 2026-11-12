@@ -3,7 +3,7 @@
  * الأسماء قابلة للتجاوز بمتغيرات البيئة (KIE_IMAGE_MODEL، KIE_VIDEO_MODEL، COMETAPI_IMAGE_MODEL، COMETAPI_VIDEO_MODEL).
  */
 
-export type ProviderId = "kie" | "cometapi" | "nvidia" | "gemini";
+export type ProviderId = "kie" | "cometapi" | "nvidia" | "gemini" | "fal" | "replicate" | "custom";
 export type TaskProvider = ProviderId | "merger";
 export type MediaType = "image" | "video" | "merge";
 
@@ -23,23 +23,36 @@ const NVIDIA_IMAGE = process.env.NVIDIA_IMAGE_MODEL || "black-forest-labs/flux.1
 const GEMINI_IMAGE = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
 // Veo 3.1 Preview توقف في Gemini API منذ 2026-10-22 — البديل الرسمي: Interactions API مع Gemini Omni Flash
 const GEMINI_VIDEO = process.env.GEMINI_VIDEO_MODEL || "gemini-omni-1.2-flash";
+// مزودات إضافية ذاتية الخدمة (مفاتيح مدفوعة لكل استخدام — بدون اشتراك)
+const FAL_VIDEO = process.env.FAL_VIDEO_MODEL || "xai/grok-imagine-video/text-to-video";
+const FAL_IMAGE = process.env.FAL_IMAGE_MODEL || "fal-ai/flux/schnell";
+const REPLICATE_VIDEO = process.env.REPLICATE_VIDEO_MODEL || "minimax/hailuo-2.3";
+const REPLICATE_IMAGE = process.env.REPLICATE_IMAGE_MODEL || "black-forest-labs/flux-schnell";
+// المزود المخصص: اسم الموديل يُقرأ من model_override الخاص بكل مفتاح — هذا احتياط عام فقط
+const CUSTOM_IMAGE = process.env.CUSTOM_IMAGE_MODEL || "";
 
 export const MODELS: ModelDef[] = [
   {
     canonical: "gpt-image-2-6/flare-text-to-image",
     aliases: ["gpt-image-2.6/flare-text-to-image", "gpt-image-2-6-flare-text-to-image", "gpt-image-2.6-flare-text-to-image"],
     type: "image",
-    // الصور: gemini أولًا (سريع الرد وحصته المجانية تتجدد)، ثم nvidia، ثم kie ثم cometapi
-    providers: ["gemini", "nvidia", "kie", "cometapi"],
-    providerModel: { kie: KIE_IMAGE, cometapi: COMET_IMAGE, nvidia: NVIDIA_IMAGE, gemini: GEMINI_IMAGE },
+    // الصور: gemini أولًا (سريع الرد وحصته المجانية تتجدد)، ثم nvidia، ثم kie ثم cometapi ثم المزودات الإضافية
+    providers: ["gemini", "nvidia", "kie", "cometapi", "fal", "replicate", "custom"],
+    providerModel: {
+      kie: KIE_IMAGE, cometapi: COMET_IMAGE, nvidia: NVIDIA_IMAGE, gemini: GEMINI_IMAGE,
+      fal: FAL_IMAGE, replicate: REPLICATE_IMAGE, custom: CUSTOM_IMAGE,
+    },
   },
   {
     canonical: "grok-imagine-video-1-5-preview",
     aliases: ["grok-imagine-video-1.5-preview", "grok-imagine-video-1-5", "grok-imagine-video-1.5"],
     type: "video",
-    // الفيديو: kie ثم cometapi ثم gemini (Gemini Omni عبر Interactions API) كشبكة أمان بمفتاح موجود
-    providers: ["kie", "cometapi", "gemini"],
-    providerModel: { kie: KIE_VIDEO, cometapi: COMET_VIDEO, nvidia: "", gemini: GEMINI_VIDEO },
+    // الفيديو: kie ثم cometapi ثم gemini (Gemini Omni) ثم fal (نفس موديل grok) ثم replicate (hailuo)
+    providers: ["kie", "cometapi", "gemini", "fal", "replicate"],
+    providerModel: {
+      kie: KIE_VIDEO, cometapi: COMET_VIDEO, nvidia: "", gemini: GEMINI_VIDEO,
+      fal: FAL_VIDEO, replicate: REPLICATE_VIDEO, custom: "",
+    },
   },
 ];
 

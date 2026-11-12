@@ -58,6 +58,14 @@ export function ensureSchema(): Promise<void> {
         last_error TEXT,
         created_at TEXT DEFAULT (datetime('now'))
       )`);
+      // أعمدة المزودات المخصصة — تُضاف بصمت إن لم توجد (لا يوجد نظام migrations)
+      for (const ddl of [
+        "ALTER TABLE api_keys ADD COLUMN base_url TEXT DEFAULT ''",
+        "ALTER TABLE api_keys ADD COLUMN dialect TEXT DEFAULT ''",
+        "ALTER TABLE api_keys ADD COLUMN model_override TEXT DEFAULT ''",
+      ]) {
+        try { await db.execute(ddl); } catch { /* العمود موجود مسبقًا */ }
+      }
       // تخزين الوسائط المولدة (base64 مقسم على أجزاء) — تُخدَم عبر /api/media/[id]
       await db.execute(`CREATE TABLE IF NOT EXISTS media_files (
         id TEXT NOT NULL,
@@ -137,6 +145,10 @@ export interface KeyRow {
   last_checked_at: string | null;
   last_error: string | null;
   created_at: string;
+  // المزودات المخصصة: رابط الـ API + لهجته + تجاوز اسم الموديل لهذا المفتاح
+  base_url?: string | null;
+  dialect?: string | null;
+  model_override?: string | null;
 }
 
 /* ============ عمليات المهام ============ */
@@ -247,12 +259,12 @@ export async function taskStats(): Promise<{ total: number; completed: number; f
 
 /* ============ عمليات المفاتيح ============ */
 
-export async function insertKey(k: { id: string; provider: string; label: string; api_key: string }): Promise<void> {
+export async function insertKey(k: { id: string; provider: string; label: string; api_key: string; base_url?: string; dialect?: string; model_override?: string }): Promise<void> {
   await ensureSchema();
   await getTurso().execute({
-    sql: `INSERT INTO api_keys (id, provider, label, api_key, status, usage_count, success_count, fail_count)
-          VALUES (?, ?, ?, ?, 'active', 0, 0, 0)`,
-    args: [k.id, k.provider, k.label, k.api_key],
+    sql: `INSERT INTO api_keys (id, provider, label, api_key, status, usage_count, success_count, fail_count, base_url, dialect, model_override)
+          VALUES (?, ?, ?, ?, 'active', 0, 0, 0, ?, ?, ?)`,
+    args: [k.id, k.provider, k.label, k.api_key, k.base_url ?? "", k.dialect ?? "", k.model_override ?? ""],
   });
 }
 

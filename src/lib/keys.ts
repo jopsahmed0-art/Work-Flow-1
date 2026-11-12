@@ -78,5 +78,9 @@ export function safeKey(k: KeyRow): Record<string, unknown> {
     last_checked_at: k.last_checked_at,
     last_error: k.last_error,
     created_at: k.created_at,
+    // بيانات المزودات المخصصة (ليست سرية)
+    base_url: k.base_url || "",
+    dialect: k.dialect || "",
+    model_override: k.model_override || "",
   };
 }

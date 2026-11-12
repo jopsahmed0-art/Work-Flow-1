@@ -37,13 +37,20 @@ export async function providerFetch(
   }
 }
 
+/** بيانات إضافية تُمرَّر للمهايئ مع كل نداء (تُقرأ من صف المفتاح) */
+export interface KeyMeta {
+  baseUrl?: string;       // رابط الـ API الأساسي — لمزود "custom"
+  dialect?: string;       // لهجة الـ API ("openai" حاليًا)
+  modelOverride?: string; // تجاوز اسم الموديل لهذا المفتاح تحديدًا
+}
+
 export interface ProviderAdapter {
   /** مهمة غير متزامنة (فيديو، وبعض الصور): تعيد providerTaskId */
-  createTask(key: string, model: string, input: Record<string, unknown>): Promise<{ providerTaskId: string }>;
+  createTask(key: string, model: string, input: Record<string, unknown>, meta?: KeyMeta): Promise<{ providerTaskId: string }>;
   /** صور متزامنة إن كان المزود يدعمها (CometAPI تعيد النتيجة فورًا) */
-  createImageSync?(key: string, model: string, input: Record<string, unknown>): Promise<{ urls: string[] }>;
+  createImageSync?(key: string, model: string, input: Record<string, unknown>, meta?: KeyMeta): Promise<{ urls: string[] }>;
   /** استعلام حالة مهمة جارية */
-  checkTask(key: string, providerTaskId: string): Promise<{
+  checkTask(key: string, providerTaskId: string, meta?: KeyMeta): Promise<{
     status: "processing" | "completed" | "failed";
     urls?: string[];
     error?: string;

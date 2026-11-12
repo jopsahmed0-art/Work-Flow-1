@@ -14,21 +14,20 @@ import {
 } from "./turso";
 import { getKeyPool, classifyProviderError } from "./keys";
 import { findModel, type ModelDef, type ProviderId } from "./models";
-import { isProviderError, type ProviderAdapter } from "./providers/types";
-import { kieAdapter } from "./providers/kie";
-import { cometapiAdapter } from "./providers/cometapi";
-import { nvidiaAdapter } from "./providers/nvidia";
-import { geminiAdapter } from "./providers/gemini";
+import { isProviderError, type ProviderAdapter, type KeyMeta } from "./providers/types";
+import { adapterFor } from "./providers/registry";
 import {
   mergerConfigured, createMergeJob, processMergeJob, getMergeJob, MergerHttpError,
 } from "./merger";
 
-const ADAPTERS: Record<ProviderId, ProviderAdapter> = {
-  kie: kieAdapter,
-  cometapi: cometapiAdapter,
-  nvidia: nvidiaAdapter,
-  gemini: geminiAdapter,
-};
+/** بيانات المزود المخصص من صف المفتاح — تُمرَّر للمهايئ مع كل نداء */
+function keyMeta(k: { base_url?: string | null; dialect?: string | null; model_override?: string | null }): KeyMeta {
+  return {
+    baseUrl: k.base_url || undefined,
+    dialect: k.dialect || undefined,
+    modelOverride: k.model_override || undefined,
+  };
+}
 
 const POLL_INTERVAL_MS = 3000;   // استعلام كل 3 ثوانٍ أثناء نافذة الانتظار
 const RESUME_COOLDOWN_MS = 45_000; // تهدئة إعادة المحاولة عبر get_task
@@ -145,9 +144,11 @@ async function pollWindow(
   apiKey: string,
   providerTaskId: string,
   deadlineMs: number,
-  notify?: NotifyFn
+  notify?: NotifyFn,
+  meta?: KeyMeta
 ): Promise<PollOutcome> {
-  const adapter = ADAPTERS[provider];
+  const adapter = adapterFor(provider, meta);
+  if (!adapter) return { kind: "key-failure" };
   const started = Date.now();
   let lastNotifiedProgress = -1;
 
@@ -228,7 +229,7 @@ async function attemptPool(
   notify?: NotifyFn
 ): Promise<TaskRow> {
   // مسبحة المفاتيح: نحتفظ فقط بالمفاتيح التي لها مهايئ مسجّل (تتسع تلقائيًا مع كل مزود جديد)
-  const pool = (await getKeyPool(model.providers)).filter((k) => !!ADAPTERS[k.provider as ProviderId]);
+  const pool = (await getKeyPool(model.providers)).filter((k) => !!adapterFor(k.provider, keyMeta(k)));
   const deadlineMs = Date.now() + windowMs;
 
   await updateTask(taskId, { status: "processing", progress: 5 });
@@ -236,9 +237,11 @@ async function attemptPool(
   for (let i = Math.max(0, startFromKeyIndex); i < pool.length; i++) {
     const key = pool[i];
     const provider = key.provider as ProviderId;
-    const adapter = ADAPTERS[provider];
+    const adapter = adapterFor(provider, keyMeta(key));
     if (!adapter) continue;
-    const providerModel = model.providerModel[provider] ?? model.canonical;
+    // تجاوز الموديل على مستوى المفتاح له الأولوية (يلزم للمزودات المخصصة)
+    const providerModel = key.model_override?.trim() || model.providerModel[provider] || model.canonical;
+    const meta = keyMeta(key);
 
     // محاولة الإنشاء لدى المزود — كل محاولة تُسجَّل مع عدّادات المفتاح دائمًا
     await updateKey(key.id, { usage_delta: 1, last_used_at: nowIso() });
@@ -246,11 +249,11 @@ async function attemptPool(
     let syncUrls: string[] | null = null;
     try {
       if (type === "image" && adapter.createImageSync) {
-        // مزود يدعم صورًا متزامنة (CometAPI) — النتيجة فورًا
-        syncUrls = (await adapter.createImageSync(key.api_key, providerModel, buildProviderInput(type, params))).urls;
+        // مزود يدعم صورًا متزامنة (CometAPI والمزود المخصص) — النتيجة فورًا
+        syncUrls = (await adapter.createImageSync(key.api_key, providerModel, buildProviderInput(type, params), meta)).urls;
         providerTaskId = "sync";
       } else {
-        providerTaskId = (await adapter.createTask(key.api_key, providerModel, buildProviderInput(type, params))).providerTaskId;
+        providerTaskId = (await adapter.createTask(key.api_key, providerModel, buildProviderInput(type, params), meta)).providerTaskId;
       }
     } catch (e) {
       const { cls, msg } = classifyUnknown(e);
@@ -274,7 +277,7 @@ async function attemptPool(
       return (await getTask(taskId)) as TaskRow;
     }
 
-    const outcome = await pollWindow(taskId, provider, key.id, key.label ?? "", key.api_key, providerTaskId, deadlineMs, notify);
+    const outcome = await pollWindow(taskId, provider, key.id, key.label ?? "", key.api_key, providerTaskId, deadlineMs, notify, meta);
     if (outcome.kind === "completed" || outcome.kind === "failed-final" || outcome.kind === "timeout") {
       return (await getTask(taskId)) as TaskRow;
     }
@@ -358,11 +361,11 @@ export async function refreshTask(taskId: string, notify?: NotifyFn): Promise<Ta
   // جارية ومربوطة بمهمة مزود → استعلام واحد سريع
   if (task.provider_task_id && task.provider && task.provider !== "merger") {
     const provider = task.provider as ProviderId;
-    const adapter = ADAPTERS[provider];
     const key = task.key_id ? await getKey(task.key_id) : null;
+    const adapter = key ? adapterFor(provider, keyMeta(key)) : null;
     if (adapter && key && key.status !== "disabled") {
       try {
-        const check = await adapter.checkTask(key.api_key, task.provider_task_id);
+        const check = await adapter.checkTask(key.api_key, task.provider_task_id, keyMeta(key));
         if (check.status === "completed" && check.urls?.length) {
           await updateTask(task.id, { status: "completed", progress: 100, result_urls: check.urls, error_message: null });
         } else if (check.status === "failed") {

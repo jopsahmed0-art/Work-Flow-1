@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BATCH = 50;
-const PROVIDERS = ["kie", "cometapi", "nvidia", "gemini"] as const;
+const PROVIDERS = ["kie", "cometapi", "nvidia", "gemini", "fal", "replicate", "custom"] as const;
 
 /** استخراج قائمة المفاتيح من الحقل المفرد أو المصفوفة — يقبل الأسطر الجديدة والفواصل */
 function parseKeyList(raw: unknown): string[] {
@@ -40,12 +40,23 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { provider?: string; api_key?: string; api_keys?: string[]; label?: string };
+    const body = (await req.json()) as {
+      provider?: string; api_key?: string; api_keys?: string[]; label?: string;
+      base_url?: string; dialect?: string; model_override?: string;
+    };
     const provider = String(body.provider ?? "").trim().toLowerCase();
     const label = String(body.label ?? "").trim().slice(0, 80);
 
     if (!PROVIDERS.includes(provider as typeof PROVIDERS[number])) {
       return Response.json({ error: `المزود يجب أن يكون واحدًا من: ${PROVIDERS.join("، ")}` }, { status: 400 });
+    }
+
+    // المزود المخصص: رابط الـ API إلزامي (مثل https://api.deepinfra.com/v1/openai)
+    const baseUrl = String(body.base_url ?? "").trim();
+    const dialect = String(body.dialect ?? "").trim().toLowerCase() || "openai";
+    const modelOverride = String(body.model_override ?? "").trim();
+    if (provider === "custom" && !/^https?:\/\//i.test(baseUrl)) {
+      return Response.json({ error: "لمزود مخصص: base_url مطلوب ويجب أن يبدأ http/https — مثل https://api.deepinfra.com/v1/openai" }, { status: 400 });
     }
 
     const keyList = parseKeyList(body.api_keys ?? body.api_key);
@@ -68,7 +79,7 @@ export async function POST(req: Request) {
         continue;
       }
       const id = crypto.randomUUID();
-      await insertKey({ id, provider, label: effectiveLabel, api_key: apiKey });
+      await insertKey({ id, provider, label: effectiveLabel, api_key: apiKey, base_url: baseUrl, dialect, model_override: modelOverride });
       added++;
       results.push({ masked: maskKey(apiKey), ok: true });
     }

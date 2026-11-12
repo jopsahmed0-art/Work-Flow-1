@@ -28,6 +28,7 @@ interface KeySafe {
   id: string; provider: string; label: string; masked: string; status: string;
   usage_count: number; success_count: number; fail_count: number;
   last_used_at: string | null; last_error: string | null; created_at: string;
+  base_url?: string; model_override?: string;
 }
 interface TaskItem {
   id: string; type: string; model: string; provider: string | null; status: string;
@@ -74,6 +75,9 @@ const PROVIDER_LABELS: Record<string, string> = {
   cometapi: "CometAPI",
   nvidia: "NVIDIA NIM",
   gemini: "Google Gemini",
+  fal: "fal.ai",
+  replicate: "Replicate",
+  custom: "مخصص (متوافق OpenAI)",
 };
 
 const PROVIDER_SOURCES: Record<string, string> = {
@@ -81,6 +85,9 @@ const PROVIDER_SOURCES: Record<string, string> = {
   cometapi: "cometapi.com → API Keys (sk-…)",
   nvidia: "build.nvidia.com (nvapi-…)",
   gemini: "aistudio.google.com/apikey",
+  fal: "fal.ai/dashboard/keys (FAL_KEY)",
+  replicate: "replicate.com/account/api-tokens (r8_…)",
+  custom: "أي موقع متوافق مع OpenAI + base_url",
 };
 
 function fmtTime(s: string | null): string {
@@ -122,6 +129,9 @@ export default function Dashboard() {
   const [label, setLabel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [adding, setAdding] = useState(false);
+  // للمزود المخصص: رابط الـ API + اسم الموديل لدى ذلك الموقع
+  const [baseUrl, setBaseUrl] = useState("");
+  const [modelOverride, setModelOverride] = useState("");
 
   /* ============ الجلب ============ */
   const loadHealth = useCallback(async () => {
@@ -157,12 +167,15 @@ export default function Dashboard() {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, api_keys: list, label: label.trim() }),
+        body: JSON.stringify({
+          provider, api_keys: list, label: label.trim(),
+          base_url: baseUrl.trim(), model_override: modelOverride.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { toast({ title: data.error ?? "تعذر إضافة المفاتيح", variant: "destructive" }); return; }
       setKeys(data.keys ?? []);
-      setApiKey(""); setLabel("");
+      setApiKey(""); setLabel(""); setBaseUrl(""); setModelOverride("");
       const skippedNote = data.skipped > 0 ? ` — وتُجاهِل ${data.skipped} مكرر` : "";
       toast({
         title: data.added > 0
@@ -290,6 +303,9 @@ export default function Dashboard() {
                     <SelectItem value="cometapi">CometAPI</SelectItem>
                     <SelectItem value="nvidia">NVIDIA NIM</SelectItem>
                     <SelectItem value="gemini">Google Gemini</SelectItem>
+                    <SelectItem value="fal">fal.ai</SelectItem>
+                    <SelectItem value="replicate">Replicate</SelectItem>
+                    <SelectItem value="custom">مخصص (متوافق OpenAI)</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
@@ -302,6 +318,25 @@ export default function Dashboard() {
                   {adding ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} إضافة
                 </Button>
               </div>
+              {/* حقول المزود المخصص: رابط الـ API + اسم الموديل */}
+              {provider === "custom" && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    placeholder="base_url — مثل: https://api.deepinfra.com/v1/openai"
+                    className="bg-slate-950 border-slate-700 font-mono text-sm"
+                    dir="ltr"
+                  />
+                  <Input
+                    value={modelOverride}
+                    onChange={(e) => setModelOverride(e.target.value)}
+                    placeholder="اسم الموديل لدى الموقع — مثل: black-forest-labs/flux-schnell"
+                    className="bg-slate-950 border-slate-700 font-mono text-sm"
+                    dir="ltr"
+                  />
+                </div>
+              )}
               <Textarea
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
@@ -347,6 +382,9 @@ export default function Dashboard() {
                         <span>استخدام: <b className="text-slate-200">{k.usage_count}</b></span>
                         <span>نجاح: <b className="text-emerald-400">{k.success_count}</b></span>
                         <span>فشل: <b className="text-red-400">{k.fail_count}</b></span>
+                        {k.provider === "custom" && k.base_url ? (
+                          <span dir="ltr" className="font-mono text-slate-500">{k.base_url}{k.model_override ? ` · ${k.model_override}` : ""}</span>
+                        ) : null}
                         <span>آخر استخدام: {fmtTime(k.last_used_at)}</span>
                       </div>
                       {k.last_error && (
