@@ -17,6 +17,8 @@ import { findModel, type ModelDef, type ProviderId } from "./models";
 import { isProviderError, type ProviderAdapter } from "./providers/types";
 import { kieAdapter } from "./providers/kie";
 import { cometapiAdapter } from "./providers/cometapi";
+import { nvidiaAdapter } from "./providers/nvidia";
+import { geminiAdapter } from "./providers/gemini";
 import {
   mergerConfigured, createMergeJob, processMergeJob, getMergeJob, MergerHttpError,
 } from "./merger";
@@ -24,6 +26,8 @@ import {
 const ADAPTERS: Record<ProviderId, ProviderAdapter> = {
   kie: kieAdapter,
   cometapi: cometapiAdapter,
+  nvidia: nvidiaAdapter,
+  gemini: geminiAdapter,
 };
 
 const POLL_INTERVAL_MS = 3000;   // استعلام كل 3 ثوانٍ أثناء نافذة الانتظار
@@ -223,7 +227,8 @@ async function attemptPool(
   startFromKeyIndex: number,
   notify?: NotifyFn
 ): Promise<TaskRow> {
-  const pool = (await getKeyPool(model.providers)).filter((k) => k.provider === "kie" || k.provider === "cometapi");
+  // مسبحة المفاتيح: نحتفظ فقط بالمفاتيح التي لها مهايئ مسجّل (تتسع تلقائيًا مع كل مزود جديد)
+  const pool = (await getKeyPool(model.providers)).filter((k) => !!ADAPTERS[k.provider as ProviderId]);
   const deadlineMs = Date.now() + windowMs;
 
   await updateTask(taskId, { status: "processing", progress: 5 });

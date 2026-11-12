@@ -68,6 +68,21 @@ const keyStatusMeta: Record<string, { label: string; cls: string }> = {
   disabled: { label: "معطّل", cls: "bg-slate-500/15 text-slate-500 border-slate-500/30" },
 };
 
+/** أسماء المزودين المعروضة + مصدر المفتاح لكل مزود */
+const PROVIDER_LABELS: Record<string, string> = {
+  kie: "kie.ai",
+  cometapi: "CometAPI",
+  nvidia: "NVIDIA NIM",
+  gemini: "Google Gemini",
+};
+
+const PROVIDER_SOURCES: Record<string, string> = {
+  kie: "kie.ai → API Keys",
+  cometapi: "cometapi.com → API Keys (sk-…)",
+  nvidia: "build.nvidia.com (nvapi-…)",
+  gemini: "aistudio.google.com/apikey",
+};
+
 function fmtTime(s: string | null): string {
   if (!s) return "—";
   const d = new Date(s.includes("T") ? s : s.replace(" ", "T") + "Z");
@@ -273,6 +288,8 @@ export default function Dashboard() {
                   <SelectContent>
                     <SelectItem value="kie">kie.ai</SelectItem>
                     <SelectItem value="cometapi">CometAPI</SelectItem>
+                    <SelectItem value="nvidia">NVIDIA NIM</SelectItem>
+                    <SelectItem value="gemini">Google Gemini</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
@@ -293,6 +310,11 @@ export default function Dashboard() {
                 className="resize-y bg-slate-950 border-slate-700 font-mono text-sm"
                 dir="ltr"
               />
+              {/* مصدر المفتاح للمزود المختار — يساعد على أخذ المفتاح من المكان الصحيح */}
+              <p className="text-xs text-slate-500">
+                مصدر مفتاح <b className="text-slate-300">{PROVIDER_LABELS[provider] ?? provider}</b>:{" "}
+                <span dir="ltr" className="font-mono text-slate-400">{PROVIDER_SOURCES[provider] ?? "—"}</span>
+              </p>
 
               {/* القائمة */}
               {keys.length === 0 ? (
@@ -307,7 +329,7 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                           <span className="flex size-6 items-center justify-center rounded-md bg-slate-800 text-xs font-bold text-slate-300">{i + 1}</span>
                           <code dir="ltr" className="font-mono text-sm text-cyan-300">{k.masked}</code>
-                          <Badge variant="outline" className="border-slate-700 bg-slate-900 text-slate-300">{k.provider === "kie" ? "kie.ai" : "CometAPI"}</Badge>
+                          <Badge variant="outline" className="border-slate-700 bg-slate-900 text-slate-300">{PROVIDER_LABELS[k.provider] ?? k.provider}</Badge>
                           <Badge className={keyStatusMeta[k.status]?.cls ?? keyStatusMeta.disabled.cls}>{keyStatusMeta[k.status]?.label ?? k.status}</Badge>
                         </div>
                         <div className="flex items-center gap-1">

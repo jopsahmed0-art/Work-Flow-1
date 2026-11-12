@@ -58,6 +58,15 @@ export function ensureSchema(): Promise<void> {
         last_error TEXT,
         created_at TEXT DEFAULT (datetime('now'))
       )`);
+      // تخزين الوسائط المولدة (base64 مقسم على أجزاء) — تُخدَم عبر /api/media/[id]
+      await db.execute(`CREATE TABLE IF NOT EXISTS media_files (
+        id TEXT NOT NULL,
+        part INTEGER NOT NULL,
+        mime TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (id, part)
+      )`);
       // فهارس مساعدة بسيطة لترتيب القوائم
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at DESC)`);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_keys_created ON api_keys(created_at ASC)`);
@@ -259,13 +268,14 @@ export async function getKey(id: string): Promise<KeyRow | null> {
   return r.rows.length ? (r.rows[0] as unknown as KeyRow) : null;
 }
 
-export async function updateKey(id: string, patch: Partial<Pick<KeyRow, "status" | "last_error" | "last_used_at" | "last_checked_at">> & {
+export async function updateKey(id: string, patch: Partial<Pick<KeyRow, "status" | "provider" | "last_error" | "last_used_at" | "last_checked_at">> & {
   usage_delta?: number; success_delta?: number; fail_delta?: number;
 }): Promise<void> {
   await ensureSchema();
   const sets: string[] = [];
   const args: InValue[] = [];
   if (patch.status !== undefined) { sets.push("status = ?"); args.push(patch.status); }
+  if (patch.provider !== undefined) { sets.push("provider = ?"); args.push(patch.provider); }
   if (patch.last_error !== undefined) { sets.push("last_error = ?"); args.push(patch.last_error); }
   if (patch.last_used_at !== undefined) { sets.push("last_used_at = ?"); args.push(patch.last_used_at); }
   if (patch.last_checked_at !== undefined) { sets.push("last_checked_at = ?"); args.push(patch.last_checked_at); }

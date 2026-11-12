@@ -3,7 +3,7 @@
  * الأسماء قابلة للتجاوز بمتغيرات البيئة (KIE_IMAGE_MODEL، KIE_VIDEO_MODEL، COMETAPI_IMAGE_MODEL، COMETAPI_VIDEO_MODEL).
  */
 
-export type ProviderId = "kie" | "cometapi";
+export type ProviderId = "kie" | "cometapi" | "nvidia" | "gemini";
 export type TaskProvider = ProviderId | "merger";
 export type MediaType = "image" | "video" | "merge";
 
@@ -19,21 +19,24 @@ const KIE_IMAGE = process.env.KIE_IMAGE_MODEL || "gpt-image-2-6/flare-text-to-im
 const KIE_VIDEO = process.env.KIE_VIDEO_MODEL || "grok-imagine-video-1-5-preview";
 const COMET_IMAGE = process.env.COMETAPI_IMAGE_MODEL || "gpt-image-2.6-flare-text-to-image";
 const COMET_VIDEO = process.env.COMETAPI_VIDEO_MODEL || "grok-imagine-video-1-5-preview";
+const NVIDIA_IMAGE = process.env.NVIDIA_IMAGE_MODEL || "black-forest-labs/flux.1-dev";
+const GEMINI_IMAGE = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
 
 export const MODELS: ModelDef[] = [
   {
     canonical: "gpt-image-2-6/flare-text-to-image",
     aliases: ["gpt-image-2.6/flare-text-to-image", "gpt-image-2-6-flare-text-to-image", "gpt-image-2.6-flare-text-to-image"],
     type: "image",
-    providers: ["kie", "cometapi"],
-    providerModel: { kie: KIE_IMAGE, cometapi: COMET_IMAGE },
+    // الصور: مزودات sync الجديدة أولًا (أسرع نجاحًا مع المفاتيح المجانية) ثم kie ثم cometapi
+    providers: ["nvidia", "gemini", "kie", "cometapi"],
+    providerModel: { kie: KIE_IMAGE, cometapi: COMET_IMAGE, nvidia: NVIDIA_IMAGE, gemini: GEMINI_IMAGE },
   },
   {
     canonical: "grok-imagine-video-1-5-preview",
     aliases: ["grok-imagine-video-1.5-preview", "grok-imagine-video-1-5", "grok-imagine-video-1.5"],
     type: "video",
     providers: ["kie", "cometapi"],
-    providerModel: { kie: KIE_VIDEO, cometapi: COMET_VIDEO },
+    providerModel: { kie: KIE_VIDEO, cometapi: COMET_VIDEO, nvidia: "", gemini: "" },
   },
 ];
 

@@ -11,6 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BATCH = 50;
+const PROVIDERS = ["kie", "cometapi", "nvidia", "gemini"] as const;
 
 /** استخراج قائمة المفاتيح من الحقل المفرد أو المصفوفة — يقبل الأسطر الجديدة والفواصل */
 function parseKeyList(raw: unknown): string[] {
@@ -43,8 +44,8 @@ export async function POST(req: Request) {
     const provider = String(body.provider ?? "").trim().toLowerCase();
     const label = String(body.label ?? "").trim().slice(0, 80);
 
-    if (provider !== "kie" && provider !== "cometapi") {
-      return Response.json({ error: "المزود يجب أن يكون kie أو cometapi" }, { status: 400 });
+    if (!PROVIDERS.includes(provider as typeof PROVIDERS[number])) {
+      return Response.json({ error: `المزود يجب أن يكون واحدًا من: ${PROVIDERS.join("، ")}` }, { status: 400 });
     }
 
     const keyList = parseKeyList(body.api_keys ?? body.api_key);
