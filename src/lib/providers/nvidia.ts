@@ -64,7 +64,9 @@ export const nvidiaAdapter: ProviderAdapter = {
   async createImageSync(key, model, input) {
     const fmt = String(input.output_format ?? "png");
     const buildBody = (withMode: boolean): Record<string, unknown> => {
-      const b: Record<string, unknown> = { prompt: String(input.prompt ?? ""), output_format: fmt };
+      // ملاحظة مقاسة من الموّلد: نقاط NIM للصور (flux.1-dev وأشباهها) ترفض output_format
+      // بـ 422 extra_forbidden — الصورة تعود base64 دائمًا، والصيغة تُستخدم محليًا في saveMedia فقط
+      const b: Record<string, unknown> = { prompt: String(input.prompt ?? "") };
       // mode:"base" مطلوب لدى flux.1-dev — بعض النقاط الأخرى (schnell/SDXL) قد ترفضه، لذا التكيف تلقائيًا
       if (withMode) b.mode = "base";
       const ar = String(input.aspect_ratio ?? "");

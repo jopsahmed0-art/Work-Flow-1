@@ -26,7 +26,7 @@ export type ErrorClass = "disabled" | "exhausted" | "provider" | "params" | "tem
 
 /** أنماط الرسائل المعروفة — تُفحص case-insensitive */
 // "unusual account activity": الحساب نفسه معلّق من المزود (مقاسة من kie.ai) — لا طلب سيمرّ به فالتعطيل تلقائيًا أفضل من تكرار المحاولة للأبد
-const AUTH_PATTERNS = /invalid api key|unauthorized|forbidden|authentication|api key.*(invalid|not valid|incorrect)|invalid.*(token|key)|unusual account activity/i;
+const AUTH_PATTERNS = /invalid api key|unauthorized|\bforbidden\b|authentication|api key.*(invalid|not valid|incorrect)|invalid.*(token|key)|unusual account activity/i;
 const BALANCE_PATTERNS = /insufficient|quota|balance|credit|out of credits|exhausted|充值|billing|payment required|no enough/i;
 const MODEL_PATTERNS = /model not found|unsupported model|not supported.*model|model.*(not supported|does not exist|not found)|unknown model/i;
 
@@ -40,7 +40,11 @@ export function classifyProviderError(httpStatus: number | undefined, message: s
   const effective = bodyCode ?? httpStatus ?? 0;
   const msg = String(message ?? "");
 
-  // 1) مصادقة → المفتاح مرفوض
+  // 0) 422 Unprocessable Entity → معطيات الطلب دائمًا، قبل أي فحص نصي عمدًا:
+  //    نصوص التحقق قد تحمل كلمة "forbidden" داخل اسم نوع الخطأ (extra_forbidden) فلا تُخدع بوصفها رفض مصادقة
+  if (effective === 422) return "params";
+
+  // 1) مصادقة → المفتاح مرفوض (\b حتى لا تطابق الكلمة داخل معرفات مثل extra_forbidden)
   if (effective === 401 || effective === 403 || AUTH_PATTERNS.test(msg)) return "disabled";
 
   // 2) نفاد رصيد (قبل فحص 400 عمدًا)
