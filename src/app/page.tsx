@@ -279,6 +279,37 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* دليل الإعداد — يظهر فقط حين تفتقد هذه النسخة متغيرات الاتصال بقاعدة البيانات */}
+              {health?.database === "turso-not-configured" && (
+                <div className="space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+                  <p className="flex items-center gap-2 text-sm font-bold text-amber-300">
+                    <AlertTriangle className="size-4" /> قاعدة البيانات غير مضبوطة في هذه النسخة — إضافة المفاتيح معطلة حتى ضبطها
+                  </p>
+                  <p className="text-xs leading-6 text-slate-300">
+                    هذه النسخة تفتقد متغيرَي الاتصال بقاعدة Turso. ملاحظة: النسخة المنشورة الأصلية تعمل باستقلال —
+                    هذا الإعداد مطلوب لكل نسخة جديدة (محلية أو مشروع Vercel جديد) مرة واحدة فقط.
+                  </p>
+                  <JsonBlock text={"# ضعهما في .env.local للتشغيل المحلي\n# أو في Vercel → Settings → Environment Variables\nTURSO_DATABASE_URL=libsql://اسم-قاعدتك-xxx.turso.io\nTURSO_AUTH_TOKEN=eyJhbGciOi...توكن-طويل"} />
+                  <ol className="list-decimal space-y-1.5 ps-5 text-xs leading-6 text-slate-300">
+                    <li>احصل على القيمتين: من المشروع المنشور الأصلي (Vercel → Settings → Environment Variables) أو من Turso: <code dir="ltr" className="font-mono text-slate-400">turso db show &lt;db&gt;</code> ثم <code dir="ltr" className="font-mono text-slate-400">turso db tokens create &lt;db&gt;</code></li>
+                    <li>للتشغيل المحلي: أنشئ <code dir="ltr" className="font-mono text-slate-400">.env.local</code> بالسطرين أعلاه (أو نفّذ <code dir="ltr" className="font-mono text-slate-400">bash scripts/setup-env.sh</code>) ثم أعد <code dir="ltr" className="font-mono text-slate-400">npm run dev</code></li>
+                    <li>لنسخة Vercel جديدة: الصق المتغيرين في Settings → Environment Variables ثم Deployments → <b>Redeploy</b> (الإلزامي بعد إضافة المتغيرات)</li>
+                  </ol>
+                  <Button size="sm" variant="outline" onClick={loadHealth} className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10">
+                    <RefreshCw className="size-3.5" /> تحقّق من الاتصال مجددًا
+                  </Button>
+                </div>
+              )}
+              {health?.database === "turso-disconnected" && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-500/40 bg-red-500/10 p-3">
+                  <p className="text-xs leading-6 text-slate-300">
+                    المتغيرات مضبوطة لكن <b className="text-red-300">الاتصال بقاعدة Turso يفشل</b> — تحقق من صحة الرابط والتوكن (التوكن قد يكون سحبته/جدّدته من Turso).
+                  </p>
+                  <Button size="sm" variant="outline" onClick={loadHealth} className="border-red-500/40 text-red-300 hover:bg-red-500/10">
+                    <RefreshCw className="size-3.5" /> تحقّق مجددًا
+                  </Button>
+                </div>
+              )}
               {/* ملخص صحة المسبحة */}
               <div className="flex flex-wrap gap-2">
                 <Badge className="gap-1.5 border border-emerald-500/40 bg-emerald-500/15 text-emerald-400">
